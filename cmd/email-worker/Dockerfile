@@ -1,3 +1,4 @@
+# Dockerfile for the email worker service
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod ./

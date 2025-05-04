@@ -1,3 +1,4 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
@@ -53,6 +54,18 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+        
+  scheduler:
+    build:
+      context: .
+      dockerfile: cmd/scheduler/Dockerfile
+    environment:
+      DATABASE_URL: postgres://notif:secret@postgres/notifications?sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
 
 volumes:
   pgdata:

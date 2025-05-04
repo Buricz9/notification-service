@@ -1,3 +1,4 @@
+-- Migrations
 CREATE
 EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -13,3 +14,9 @@ CREATE TABLE notifications
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE notifications
+    ADD COLUMN send_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC',
+  ADD COLUMN priority INT NOT NULL DEFAULT 0;
+

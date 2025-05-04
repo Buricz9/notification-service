@@ -1,3 +1,4 @@
+# Dockerfile do budowy kontenera dla aplikacji API
 # --- etap 1: build ---
 FROM golang:1.24-alpine AS builder
 
