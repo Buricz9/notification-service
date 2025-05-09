@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: notif_user
+      POSTGRES_PASSWORD: notif_pass
+    ports: ["5432:5432"]
+    volumes: [db_data:/var/lib/postgresql/data]
+    healthcheck:                               #  <-- DODAJ
+      test: ["CMD-SHELL", "pg_isready -U notif_user -d notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    environment:
+      PGUSER: notif_user
+      PGPASSWORD: notif_pass
+      PGDATABASE: notifications
+    depends_on:                                 #  <-- ZMIEŃ
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports: ["8080:8080"]
+
+  scheduler:
+    build: ./scheduler
+    restart: unless-stopped
+    environment:
+      PGUSER: notif_user
+      PGPASSWORD: notif_pass
+      PGDATABASE: notifications
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  sender:
+    build: ./sender
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  listener:
+    build: ./listener
+    restart: unless-stopped
+    environment:
+      PGUSER: notif_user
+      PGPASSWORD: notif_pass
+      PGDATABASE: notifications
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:

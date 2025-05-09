@@ -1,0 +1,187 @@
+{
+  "info": {
+    "_postman_id": "af1d948d-557e-4741-85e8-17a2de633825",
+    "name": "Notification Service (Go) v2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "now",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "future",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "id",
+      "value": "",
+      "type": "default"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create HIGH now",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('now', Math.floor(Date.now()/1000));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "pm.environment.set('id', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{url}}/api/notifications",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Immediate high priority\",\n  \"scheduledAt\": {{now}},\n  \"priority\": \"High\",\n  \"channel\": \"push\",\n  \"timezone\": \"Europe/Warsaw\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create LOW +120s",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('future', Math.floor(Date.now()/1000)+120);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{url}}/api/notifications",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Scheduled low priority (in 2 min)\",\n  \"scheduledAt\": {{future}},\n  \"priority\": \"Low\",\n  \"channel\": \"email\",\n  \"timezone\": \"Europe/Warsaw\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Get by id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', ()=> pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{url}}/api/notifications/{{id}}"
+      }
+    },
+    {
+      "name": "List all",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', ()=> pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{url}}/api/notifications"
+      }
+    },
+    {
+      "name": "Update channel to push & priority Low",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('204 No Content', ()=> pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{url}}/api/notifications/{{id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"channel\":\"push\",\n  \"priority\":\"Low\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('204 No Content', ()=> pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": "{{url}}/api/notifications/{{id}}"
+      }
+    }
+  ]
+}
