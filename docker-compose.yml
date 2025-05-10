@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16
@@ -23,61 +21,72 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
-    build:
-      context: .
-      dockerfile: cmd/api/Dockerfile
+    build: .
+    command: /app/api
     restart: unless-stopped
     environment:
+      PGHOST: db
       PGUSER: notif_user
       PGPASSWORD: notif_pass
       PGDATABASE: notifications
+      REDIS_ADDR: redis:6379
+      PORT: "8080"
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8080:8080"
 
   scheduler:
-    build:
-      context: .
-      dockerfile: cmd/scheduler/Dockerfile
+    build: .
+    command: /app/scheduler
     restart: unless-stopped
     environment:
+      PGHOST: db
       PGUSER: notif_user
       PGPASSWORD: notif_pass
       PGDATABASE: notifications
+      REDIS_ADDR: redis:6379
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
   sender:
-    build:
-      context: .
-      dockerfile: cmd/sender/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      - redis
-
-  listener:
-    build:
-      context: .
-      dockerfile: cmd/listener/Dockerfile
+    build: .
+    command: /app/sender
     restart: unless-stopped
     environment:
+      REDIS_ADDR: redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  listener:
+    build: .
+    command: /app/listener
+    restart: unless-stopped
+    environment:
+      PGHOST: db
       PGUSER: notif_user
       PGPASSWORD: notif_pass
       PGDATABASE: notifications
+      REDIS_ADDR: redis:6379
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   db_data:

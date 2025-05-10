@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Buricz9/notification-service/internal/delivery/queue"
 	"github.com/Buricz9/notification-service/internal/domain"
+	"github.com/Buricz9/notification-service/internal/dto"
 	"log"
 	"math/rand"
 	"os"
@@ -13,8 +15,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-
-	"github.com/Buricz9/notification-service/internal/delivery/queue"
 )
 
 // Retry threshold
@@ -39,7 +39,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	handler := func(msg *redis.Message) {
-		var n queue.Notification // import queue.Notification alias domain
+		var n domain.Notification
 		if err := json.Unmarshal([]byte(msg.Payload), &n); err != nil {
 			log.Printf("invalid payload: %v", err)
 			return
@@ -52,8 +52,8 @@ func main() {
 		success := rand.Float64() < 0.5
 		if success {
 			fmt.Printf("[OK] %s → %s\n", n.Recipient, n.Message)
-			status := queue.StatusDto{NotificationId: n.ID, Status: string(domain.StatusDelivered), RetryCnt: n.RetryCnt}
-			publishStatus(ctx, rdb, status)
+			status := dto.StatusDto{NotificationId: n.ID, Status: string(domain.StatusDelivered), RetryCnt: n.RetryCnt}
+			queue.PublishStatus(ctx, rdb, status)
 			return
 		}
 
@@ -69,8 +69,8 @@ func main() {
 
 		// Exhausted retries
 		fmt.Printf("[FAIL 3/3] %s\n", n.Recipient)
-		status := queue.StatusDto{NotificationId: n.ID, Status: string(domain.StatusFailed), RetryCnt: n.RetryCnt}
-		publishStatus(ctx, rdb, status)
+		status := dto.StatusDto{NotificationId: n.ID, Status: string(domain.StatusFailed), RetryCnt: n.RetryCnt}
+		queue.PublishStatus(ctx, rdb, status)
 	}
 
 	// Consume messages

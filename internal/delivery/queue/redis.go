@@ -1,4 +1,3 @@
-// internal/delivery/queue/redis.go
 package queue
 
 import (

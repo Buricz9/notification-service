@@ -1,203 +1,308 @@
 {
   "info": {
     "_postman_id": "af1d948d-557e-4741-85e8-17a2de633825",
-    "name": "Notification Service (Go) v2",
+    "name": "Notification Service (Go) - Complete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
-      "key": "url",
+      "key": "base_url",
       "value": "http://localhost:8080"
     },
     {
       "key": "now",
       "value": "",
-      "type": "default"
+      "type": "any"
     },
     {
       "key": "future",
       "value": "",
-      "type": "default"
+      "type": "any"
     },
     {
-      "key": "id",
+      "key": "notification_id",
       "value": "",
-      "type": "default"
+      "type": "any"
     }
   ],
   "item": [
     {
-      "name": "Create HIGH now",
-      "event": [
+      "name": "Create Notification",
+      "item": [
         {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.environment.set('now', Math.floor(Date.now()/1000));"
-            ]
+          "name": "Create HIGH priority (immediate)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('now', Math.floor(Date.now()/1000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has Location header', function() {",
+                  "    pm.expect(pm.response.headers.get('Location')).to.exist;",
+                  "});",
+                  "pm.environment.set('notification_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Immediate high priority notification\",\n  \"scheduledAt\": {{now}},\n  \"priority\": \"High\",\n  \"channel\": \"email\",\n  \"timezone\": \"Europe/Warsaw\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications"]
+            }
           }
         },
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "pm.environment.set('id', pm.response.json().id);"
-            ]
+          "name": "Create LOW priority (future)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('future', Math.floor(Date.now()/1000)+120);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Scheduled low priority notification\",\n  \"scheduledAt\": {{future}},\n  \"priority\": \"Low\",\n  \"channel\": \"push\",\n  \"timezone\": \"America/New_York\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications"]
+            }
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "{{url}}/api/notifications",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Immediate high priority\",\n  \"scheduledAt\": {{now}},\n  \"priority\": \"High\",\n  \"channel\": \"push\",\n  \"timezone\": \"Europe/Warsaw\"\n}"
-        }
-      }
+      ]
     },
     {
-      "name": "Create LOW +120s",
-      "event": [
+      "name": "Get Notification",
+      "item": [
         {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.environment.set('future', Math.floor(Date.now()/1000)+120);"
-            ]
+          "name": "Get by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains notification data', function() {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('recipient');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "{{notification_id}}"]
+            }
           }
         },
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));"
-            ]
+          "name": "List all notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function() {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications"]
+            }
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "{{url}}/api/notifications",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"recipient\": \"user@example.com\",\n  \"message\": \"Scheduled low priority (in 2 min)\",\n  \"scheduledAt\": {{future}},\n  \"priority\": \"Low\",\n  \"channel\": \"email\",\n  \"timezone\": \"Europe/Warsaw\"\n}"
-        }
-      }
+      ]
     },
     {
-      "name": "Get by id",
+      "name": "Update Notification",
+      "item": [
+        {
+          "name": "Update notification fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function() {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"updated@example.com\",\n  \"message\": \"Updated message\",\n  \"priority\": \"Low\",\n  \"channel\": \"push\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "{{notification_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Actions",
+      "item": [
+        {
+          "name": "Send now",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 202', function() {",
+                  "    pm.response.to.have.status(202);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/{{notification_id}}/send-now",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "{{notification_id}}", "send-now"]
+            }
+          }
+        },
+        {
+          "name": "Cancel notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 202', function() {",
+                  "    pm.response.to.have.status(202);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/{{notification_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "{{notification_id}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete Notification",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('200 OK', ()=> pm.response.to.have.status(200));"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "url": "{{url}}/api/notifications/{{id}}"
-      }
-    },
-    {
-      "name": "List all",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('200 OK', ()=> pm.response.to.have.status(200));"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "url": "{{url}}/api/notifications"
-      }
-    },
-    {
-      "name": "Update channel to push & priority Low",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('204 No Content', ()=> pm.response.to.have.status(204));"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "{{url}}/api/notifications/{{id}}",
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"channel\":\"push\",\n  \"priority\":\"Low\"\n}"
-        }
-      }
-    },
-    {
-      "name": "Delete",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('204 No Content', ()=> pm.response.to.have.status(204));"
+              "pm.test('Status code is 204', function() {",
+              "    pm.response.to.have.status(204);",
+              "});"
             ]
           }
         }
       ],
       "request": {
         "method": "DELETE",
-        "url": "{{url}}/api/notifications/{{id}}"
-      }
-    },
-    {
-      "name": "Cancel notification",
-      "request": {
-        "method": "POST",
-        "url": "{{url}}/api/notifications/{{id}}/cancel"
-      },
-      "event": [{
-        "listen": "test",
-        "script": {
-          "type": "text/javascript",
-          "exec": [
-            "pm.test('202 Accepted', ()=> pm.response.to.have.status(202));"
-          ]
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/notifications/{{notification_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "notifications", "{{notification_id}}"]
         }
-      }]
+      }
     }
   ]
 }

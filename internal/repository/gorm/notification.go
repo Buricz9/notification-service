@@ -1,4 +1,3 @@
-// internal/repository/gorm/repo.go
 package gormrepo
 
 import (

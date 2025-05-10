@@ -1,4 +1,3 @@
-// cmd/listener/main.go
 package main
 
 import (

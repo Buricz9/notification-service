@@ -1,4 +1,3 @@
-// internal/dto/notification.go
 package dto
 
 type Create struct {
