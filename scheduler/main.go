@@ -49,6 +49,16 @@ func redisConn() *redis.Client {
 	}
 	return rdb
 }
+func inAllowedWindow(n Notification) bool {
+	loc, err := time.LoadLocation(n.TimeZone)
+	if err != nil {
+		// gdy TimeZone nieznane – traktuj UTC
+		loc = time.UTC
+	}
+	nowLoc := time.Now().In(loc)
+	hour := nowLoc.Hour()
+	return hour >= 8 && hour < 21
+}
 
 func main() {
 	db := dbConn()
@@ -70,6 +80,10 @@ func main() {
 		}
 
 		for _, n := range due {
+			if !inAllowedWindow(n) {
+				continue
+			}
+
 			raw, _ := json.Marshal(n)
 			ch := channelLow
 			if n.Priority == "High" {
@@ -78,9 +92,9 @@ func main() {
 			if err := rdb.Publish(ctx, ch, raw).Err(); err != nil {
 				log.Printf("publish err: %v", err)
 			}
-			// od razu oznaczamy jako „Sent”
 			db.Model(&n).Update("status", "Sent")
 		}
+
 		log.Printf("published %d notifications", len(due))
 	}
 }

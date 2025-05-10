@@ -182,6 +182,22 @@
         "method": "DELETE",
         "url": "{{url}}/api/notifications/{{id}}"
       }
+    },
+    {
+      "name": "Cancel notification",
+      "request": {
+        "method": "POST",
+        "url": "{{url}}/api/notifications/{{id}}/cancel"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('202 Accepted', ()=> pm.response.to.have.status(202));"
+          ]
+        }
+      }]
     }
   ]
 }

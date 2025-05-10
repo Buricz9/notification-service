@@ -10,7 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
-const redisHigh = "notifications:pending_high_priority"
+const (
+	redisHigh       = "notifications:pending_high_priority"
+	statusPending   = "Pending"
+	statusSent      = "Sent"
+	statusDelivered = "Delivered"
+	statusFailed    = "Failed"
+	statusCancelled = "Cancelled"
+)
 
 // wszystkie ścieżki /api/notifications/**
 func registerRoutes(r *gin.Engine, db *gorm.DB, rdb *redis.Client) {
@@ -29,7 +36,7 @@ func registerRoutes(r *gin.Engine, db *gorm.DB, rdb *redis.Client) {
 			CreatedAt:   nowUnix(),
 			ScheduledAt: dto.ScheduledAt,
 			Priority:    dto.Priority,
-			Status:      "Pending",
+			Status:      statusPending,
 			Channel:     dto.Channel,
 			TimeZone:    dto.TimeZone,
 			RetryCnt:    0,
@@ -132,7 +139,7 @@ func registerRoutes(r *gin.Engine, db *gorm.DB, rdb *redis.Client) {
 		}
 
 		// jeśli już zakończone – nie wysyłamy ponownie
-		if n.Status == "Delivered" || n.Status == "Failed" {
+		if n.Status == statusDelivered || n.Status == statusFailed || n.Status == statusCancelled {
 			c.JSON(http.StatusConflict, gin.H{"error": "notification already finalized"})
 			return
 		}
@@ -145,12 +152,41 @@ func registerRoutes(r *gin.Engine, db *gorm.DB, rdb *redis.Client) {
 		}
 
 		// status -> Sent, RetryCnt bez zmian
-		n.Status = "Sent"
+		n.Status = statusSent
+
 		if err := db.Save(&n).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		c.Status(http.StatusAccepted) // 202
+	})
+
+	// ----------------------------------------------------
+	//  POST /api/notifications/:id/cancel
+	// ----------------------------------------------------
+	g.POST("/:id/cancel", func(c *gin.Context) {
+		var n Notification
+		if err := db.First(&n, c.Param("id")).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.Status(http.StatusNotFound)
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			return
+		}
+
+		// jeśli już “finalized”, nie wolno anulować
+		if n.Status == statusDelivered || n.Status == statusFailed || n.Status == statusCancelled {
+			c.JSON(http.StatusConflict, gin.H{"error": "notification already finalized"})
+			return
+		}
+
+		n.Status = statusCancelled
+		if err := db.Save(&n).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.Status(http.StatusAccepted) // 202
 	})
 
