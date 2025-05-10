@@ -8,30 +8,43 @@ services:
       POSTGRES_DB: notifications
       POSTGRES_USER: notif_user
       POSTGRES_PASSWORD: notif_pass
-    ports: ["5432:5432"]
-    volumes: [db_data:/var/lib/postgresql/data]
-    healthcheck:                               #  <-- DODAJ
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U notif_user -d notifications"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: cmd/api/Dockerfile
     restart: unless-stopped
     environment:
       PGUSER: notif_user
       PGPASSWORD: notif_pass
       PGDATABASE: notifications
-    depends_on:                                 #  <-- ZMIEŃ
+    depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-    ports: ["8080:8080"]
+    ports:
+      - "8080:8080"
 
   scheduler:
-    build: ./scheduler
+    build:
+      context: .
+      dockerfile: cmd/scheduler/Dockerfile
     restart: unless-stopped
     environment:
       PGUSER: notif_user
@@ -44,13 +57,17 @@ services:
         condition: service_started
 
   sender:
-    build: ./sender
+    build:
+      context: .
+      dockerfile: cmd/sender/Dockerfile
     restart: unless-stopped
     depends_on:
       - redis
 
   listener:
-    build: ./listener
+    build:
+      context: .
+      dockerfile: cmd/listener/Dockerfile
     restart: unless-stopped
     environment:
       PGUSER: notif_user
@@ -61,12 +78,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
 
 volumes:
   db_data:
